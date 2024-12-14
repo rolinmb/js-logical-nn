@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Javascript Logical NN</title>
+    </head>
+    <body>
+        <pre id="output"></pre>
+        <script>
+            const INPUT_SIZE = 2;
+            const HIDDEN_SIZE = 8;
+            const OUTPUT_SIZE = 1;
+            const LEARNING_RATE = 0.75;
+            const EPOCHS = 1000;
+
+            function sigmoid(x) {
+                return 1 / (1 + Math.exp(-x));
+            }
+
+            function sigmoidDeriv(x) {
+                return x * (1 - x);
+            }
+
+            function forwardHidden(inputs, hidden) {
+                let hiddenOutputs = new Array(HIDDEN_SIZE);
+                for (let i = 0; i < HIDDEN_SIZE; i++) {
+                    let weightedSum = hidden.biases[i];
+                    for (let j = 0; j < INPUT_SIZE; j++) {
+                        weightedSum += inputs[j] * hidden.weights[i][j];
+                    }
+                    hiddenOutputs[i] = sigmoid(weightedSum);
+                }
+                return hiddenOutputs;
+            }
+
+            function forwardOutput(hiddenOutputs, output) {
+                let weightedSum = output.bias;
+                for (let i = 0; i < HIDDEN_SIZE; i++) {
+                    weightedSum += hiddenOutputs[i] * output.weights[0][i];
+                }
+                return sigmoid(weightedSum);
+            }
+
+            function backpropagate(inputs, hidden, output, target) {
+                const hiddenOutputs = forwardHidden(inputs, hidden);
+                const predictedOutput = forwardOutput(hiddenOutputs, output);
+
+                const error = target - predictedOutput;
+                const outputDelta = error * sigmoidDeriv(predictedOutput);
+
+                for (let i = 0; i < HIDDEN_SIZE; i++) {
+                    output.weights[0][i] += LEARNING_RATE * outputDelta * hiddenOutputs[i];
+                }
+                output.bias += LEARNING_RATE * outputDelta;
+
+                for (let i = 0; i < HIDDEN_SIZE; i++) {
+                    const hiddenDelta = outputDelta * output.weights[0][i] * sigmoidDeriv(hiddenOutputs[i]);
+                    for (let j = 0; j < INPUT_SIZE; j++) {
+                        hidden.weights[i][j] += LEARNING_RATE * hiddenDelta * inputs[j];
+                    }
+                    hidden.biases[i] += LEARNING_RATE * hiddenDelta;
+                }
+            }
+
+            function main() {
+                const outputDiv = document.getElementById('output');
+                let hiddenLayer = {
+                    weights: Array.from({ length: HIDDEN_SIZE }, () => Array.from({ length: INPUT_SIZE }, () => Math.random())),
+                    biases: Array.from({ length: HIDDEN_SIZE }, () => Math.random())
+                };
+
+                let outputLayer = {
+                    weights: [Array.from({ length: HIDDEN_SIZE }, () => Math.random())],
+                    bias: Math.random()
+                };
+
+                const trainingData = [
+                    [0, 0],
+                    [0, 1],
+                    [1, 0],
+                    [1, 1]
+                ];
+
+                // const target = [0, 1, 1, 1]; // OR
+                // const target = [0, 1, 1, 0]; // XOR
+                // const target = [1, 0, 0, 0]; // NOR
+                // const target = [0, 0, 0, 1]; // AND
+                const target = [1, 1, 1, 0]; // NAND
+
+                for (let epoch = 0; epoch < EPOCHS; epoch++) {
+                    let totalError = 0;
+                    for (let i = 0; i < 4; i++) {
+                        const hiddenOutputs = forwardHidden(trainingData[i], hiddenLayer);
+                        backpropagate(trainingData[i], hiddenLayer, outputLayer, target[i]);
+                        const error = target[i] - forwardOutput(hiddenOutputs, outputLayer);
+                        totalError += error ** 2;
+                    }
+                     console.log(`Epoch ${epoch} -> Error: ${totalError.toFixed(6)}\n`);
+                }
+
+                outputDiv.textContent += '\nTesting:\n';
+                for (let i = 0; i < 4; i++) {
+                    const hiddenOutputs = forwardHidden(trainingData[i], hiddenLayer);
+                    const prediction = forwardOutput(hiddenOutputs, outputLayer);
+                    outputDiv.textContent += `Input: ${trainingData[i][0]} ${trainingData[i][1]}, Target: ${target[i]}, Predicted: ${prediction.toFixed(6)}\n`;
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                main();
+            });
+        </script>
+    </body>
+</html>
